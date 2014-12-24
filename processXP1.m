@@ -1,14 +1,24 @@
-function depth = processXP1(data, plotNow)
+function depth = processXP1(data, plotNow, selNow)
 %PROCESSXP1 process mearsure data
 %
 % copyright (c) wulx, wulx@mail.ustc.edu.cn
 
-% last modified by wulx, 2014/2/19
+% last modified by wulx, 2014/2/19, 2014/12/22
 
+if nargin<3, selNow = false; end
 if nargin<2, plotNow = false; end
 
 xData = data(:, 1) * 1000; % unit: nm
 zData = data(:, 2) / 10; % unit: nm
+
+if selNow
+    hf1 = figure;
+    plot(xData, zData);
+
+    [~, xData, zData] = selectdata('SelectionMode', 'brush');
+    
+    close(hf1);
+end
 
 p = polyfit(xData, zData, 1);
 zDataFitted = polyval(p, xData);
@@ -37,20 +47,22 @@ upperZ = zDataLeveled(upperLocs);
 lowerX = xData(lowerLocs);
 lowerZ = zDataLeveled(lowerLocs);
 
-% upperP = polyfit(upperX, upperZ, 5);
-% lowerP = polyfit(lowerX, lowerZ, 5);
-upperSp = spap2(3, 4, upperX, upperZ);
-lowerSp = spap2(3, 4, lowerX, lowerZ);
+upperP = polyfit(upperX, upperZ, 1);
+lowerP = polyfit(lowerX, lowerZ, 1);
+% upperSp = spap2(3, 4, upperX, upperZ);
+% lowerSp = spap2(3, 4, lowerX, lowerZ);
 
 % inverse leveling to fit the original data
-% upZFitted = polyval(upperP, xData)  + zDataFitted;
-% loZFitted = polyval(lowerP, xData) + zDataFitted;
-upZFitted = spval(upperSp, xData)  + zDataFitted;
-loZFitted = spval(lowerSp, xData) + zDataFitted;
+upZFitted = polyval(upperP, xData) + zDataFitted;
+loZFitted = polyval(lowerP, xData) + zDataFitted;
+% upZFitted = spval(upperSp, xData)  + zDataFitted;
+% loZFitted = spval(lowerSp, xData) + zDataFitted;
 
 % distance between the upper line and lower, along Z-axis 
 zDepth = upZFitted-loZFitted;
-depth = mean(zDepth); % estimated depth
+tiltAng = atan(0.5 * (upperP(1) + lowerP(1))); % IMPORTANT, bugfix!
+depth = cos(tiltAng) * mean(zDepth); % estimated depth
+
 
 if plotNow
 %     figure, hold on;
@@ -58,8 +70,7 @@ if plotNow
 %     
 %     plot(xData, zDataFitted)
 %     
-%     figure, hold on;
-%     plot(xData, zDataLeveled)
+%     plot(xData, zDataFitted, '-k')
 %     
 %     plot(xData, mu1*ones(size(xData)))
 %     % plot(xData, upperLim*ones(size(xData)))
@@ -69,6 +80,7 @@ if plotNow
 %     plot(lowerX, lowerZ, 'g.')
 %     
     figure, hold on;
+    plot(xData, zDataLeveled, '-r')
     plot(xData, zData)
     
     plot(xData, upZFitted)
